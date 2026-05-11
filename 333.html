@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模型本地部署学习手册 - Agent开发者版</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #64748b;
+            --bg-color: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-code: #1e293b;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --border-color: #e2e8f0;
+            --sidebar-width: 280px;
+            --header-height: 60px;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* 布局 */
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* 侧边栏导航 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header .version {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+        }
+
+        .nav-link.active {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+            font-weight: 600;
+            border-left-color: var(--primary-color);
+        }
+
+        .nav-indent {
+            padding-left: 1.5rem;
+            font-size: 0.8125rem;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            max-width: calc(100% - var(--sidebar-width));
+        }
+
+        .content-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        /* 移动端菜单按钮 */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 200;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 标题样式 */
+        h1, h2, h3, h4 {
+            font-weight: 700;
+            line-height: 1.3;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        h1 { font-size: 2.25rem; margin-top: 0; }
+        h2 { font-size: 1.875rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.5rem; color: var(--primary-color); }
+        h4 { font-size: 1.25rem; }
+
+        /* 段落和文本 */
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* 代码块 */
+        pre {
+            background: var(--bg-code);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+            position: relative;
+            border: 1px solid #334155;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+        }
+
+        :not(pre) > code {
+            background: #f1f5f9;
+            color: #ec4899;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+            border: 1px solid #e2e8f0;
+        }
+
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #334155;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem 0.75rem 0 0;
+            margin-bottom: -1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid #475569;
+            border-bottom: none;
+        }
+
+        .code-lang {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #475569;
+            color: white;
+        }
+
+        .copy-btn.copied {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            font-size: 0.875rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* 列表 */
+        ul, ol {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+            color: var(--text-secondary);
+        }
+
+        /* 提示框 */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border-color: var(--primary-color);
+            color: #1e40af;
+        }
+
+        .alert-warning {
+            background: #fffbeb;
+            border-color: var(--warning-color);
+            color: #92400e;
+        }
+
+        .alert-success {
+            background: #ecfdf5;
+            border-color: var(--success-color);
+            color: #065f46;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: var(--danger-color);
+            color: #991b1b;
+        }
+
+        /* 步骤卡片 */
+        .step-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            position: relative;
+            padding-left: 4rem;
+        }
+
+        .step-number {
+            position: absolute;
+            left: 1.5rem;
+            top: 1.5rem;
+            width: 2rem;
+            height: 2rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        /* 标签 */
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary-color);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        /* 锚点偏移修复 */
+        section {
+            scroll-margin-top: 2rem;
+        }
+
+        /* 回到顶部 */
+        .back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary-color);
+            color: white;
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                max-width: 100%;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .content-wrapper {
+                padding: 5rem 1.5rem 3rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            h1 { font-size: 1.75rem; }
+            h2 { font-size: 1.5rem; }
+            h3 { font-size: 1.25rem; }
+            
+            pre {
+                padding: 1rem;
+                font-size: 0.8125rem;
+            }
+        }
+
+        /* 打印优化 */
+        @media print {
+            .sidebar, .mobile-menu-btn, .back-to-top, .copy-btn {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                max-width: 100%;
+            }
+        }
+
+        /* 目录快速链接 */
+        .toc-quick-links {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .toc-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s;
+        }
+
+        .toc-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .toc-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary-color);
+        }
+
+        .toc-card p {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ 菜单</button>
+    
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1>模型本地部署手册</h1>
+                <div class="version">Agent开发者版 v1.0</div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item"><a href="#intro" class="nav-link" onclick="handleNavClick()">介绍与目录</a></li>
+                    <li class="nav-item"><a href="#chapter1" class="nav-link" onclick="handleNavClick()">一、前置准备与硬件选型</a></li>
+                    <li class="nav-item"><a href="#chapter2" class="nav-link" onclick="handleNavClick()">二、Ollama快速上手</a></li>
+                    <li class="nav-item"><a href="#chapter3" class="nav-link" onclick="handleNavClick()">三、vLLM生产部署</a></li>
+                    <li class="nav-item nav-indent"><a href="#chapter3-2" class="nav-link" onclick="handleNavClick()">OpenAI兼容API</a></li>
+                    <li class="nav-item"><a href="#chapter4" class="nav-link" onclick="handleNavClick()">四、Agent框架集成</a></li>
+                    <li class="nav-item nav-indent"><a href="#chapter4-1" class="nav-link" onclick="handleNavClick()">LangChain集成</a></li>
+                    <li class="nav-item nav-indent"><a href="#chapter4-2" class="nav-link" onclick="handleNavClick()">LlamaIndex集成</a></li>
+                    <li class="nav-item"><a href="#chapter5" class="nav-link" onclick="handleNavClick()">五、Function Calling</a></li>
+                    <li class="nav-item"><a href="#chapter6" class="nav-link" onclick="handleNavClick()">六、RAG系统集成</a></li>
+                    <li class="nav-item"><a href="#chapter7" class="nav-link" onclick="handleNavClick()">七、多Agent系统架构</a></li>
+                    <li class="nav-item"><a href="#chapter8" class="nav-link" onclick="handleNavClick()">八、性能优化与监控</a></li>
+                    <li class="nav-item"><a href="#chapter9" class="nav-link" onclick="handleNavClick()">九、故障排查手册</a></li>
+                    <li class="nav-item"><a href="#appendix" class="nav-link" onclick="handleNavClick()">附录：推荐模型</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="content-wrapper">
+                <section id="intro">
+                    <h1>模型本地部署学习手册</h1>
+                    <p style="font-size: 1.125rem; color: var(--text-secondary); margin-bottom: 2rem;">
+                        面向Agent开发者的全链路部署指南，从环境搭建到生产运维
+                    </p>
+
+                    <div class="alert alert-info">
+                        <strong>适用对象：</strong>Agent开发者、AI应用工程师<br>
+                        <strong>目标：</strong>掌握从模型部署到Agent集成的全链路技能<br>
+                        <strong>预计学习时间：</strong>按照章节顺序实践，约需 3-5 天完成全链路掌握
+                    </div>
+
+                    <h3>学习路径</h3>
+                    <div class="toc-quick-links">
+                        <a href="#chapter1" class="toc-card">
+                            <h4>1. 环境准备</h4>
+                            <p>硬件选型、CUDA配置、基础环境搭建</p>
+                        </a>
+                        <a href="#chapter2" class="toc-card">
+                            <h4>2. 快速上手</h4>
+                            <p>Ollama方案、Modelfile配置、Python SDK</p>
+                        </a>
+                        <a href="#chapter3" class="toc-card">
+                            <h4>3. 生产部署</h4>
+                            <p>vLLM高性能推理、OpenAI兼容API</p>
+                        </a>
+                        <a href="#chapter4" class="toc-card">
+                            <h4>4. Agent集成</h4>
+                            <p>LangChain、LlamaIndex框架接入</p>
+                        </a>
+                        <a href="#chapter5" class="toc-card">
+                            <h4>5. 工具调用</h4>
+                            <p>Function Calling、工具注册框架</p>
+                        </a>
+                        <a href="#chapter6" class="toc-card">
+                            <h4>6. RAG系统</h4>
+                            <p>Embedding部署、向量数据库集成</p>
+                        </a>
+                    </div>
+                </section>
+
+                <section id="chapter1">
+                    <h2>一、前置准备与硬件选型</h2>
+                    
+                    <h3>1.1 硬件配置参考</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>场景</th>
+                                <th>推荐配置</th>
+                                <th>可运行模型</th>
+                                <th>预算</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>开发测试</strong></td>
+                                <td>RTX 4090 24GB + 64GB RAM</td>
+                                <td>Qwen2.5-14B/32B(4bit)<br>Llama3-70B(4bit)</td>
+                                <td>¥15,000</td>
+                            </tr>
+                            <tr>
+                                <td><strong>小规模生产</strong></td>
+                                <td>2×RTX 4090 + 128GB RAM</td>
+                                <td>Qwen2.5-72B(INT8)<br>DeepSeek-R1-32B</td>
+                                <td>¥35,000</td>
+                            </tr>
+                            <tr>
+                                <td><strong>企业级部署</strong></td>
+                                <td>4×A100 80GB</td>
+                                <td>70B+模型全精度<br>多LoRA并发</td>
+                                <td>¥80万+</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert alert-success">
+                        <strong>Agent开发者建议：</strong>起步选 <strong>RTX 4090 24GB</strong>，可覆盖 90% 的 Agent 开发场景。
+                    </div>
+
+                    <h3>1.2 软件环境初始化</h3>
+                    
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-bash"># 基础环境（Ubuntu 22.04/Windows WSL2）
+sudo apt update && sudo apt install -y python3-pip git-lfs
+
+# CUDA 12.1+（NVIDIA显卡必需）
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt update && sudo apt install -y cuda-toolkit-12-1
+
+# Python 虚拟环境
+conda create -n agent-deploy python=3.10 -y
+conda activate agent-deploy
+
+# 核心依赖预装
+pip install torch==2.1.2 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121</code></pre>
+                </section>
+
+                <section id="chapter2">
+                    <h2>二、快速上手：Ollama方案</h2>
+                    <p><span class="tag">适用场景</span>快速验证Agent原型、个人开发、轻量级应用</p>
+
+                    <h3>2.1 安装与启动</h3>
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-bash"># Linux/macOS
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 验证安装
+ollama --version
+
+# 拉取模型（以Qwen2.5 14B为例，适合Agent开发）
+ollama pull qwen2.5:14b
+
+# 启动服务（默认11434端口）
+ollama serve</code></pre>
+
+                    <h3>2.2 配置Modelfile（Agent优化版）</h3>
+                    <p>创建 <code>AgentModelfile</code>：</p>
+                    <div class="code-header">
+                        <span class="code-lang">docker</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-docker">FROM qwen2.5:14b
+
+# Agent系统提示词模板
+SYSTEM """你是一个智能Agent助手，具备以下能力：
+1. 任务规划与分解
+2. 工具调用（Tool Use）
+3. 多轮对话记忆管理
+
+规则：
+- 如果用户问题需要外部工具，请使用工具调用格式
+- 保持对话上下文，引用之前的对话历史
+- 不确定时主动询问用户，不要编造信息"""
+
+# 参数调优（Agent需要更高的创造性）
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER repeat_penalty 1.1
+
+# 上下文长度（Agent需要长上下文追踪）
+PARAMETER num_ctx 8192</code></pre>
+
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-bash">ollama create my-agent -f AgentModelfile
+ollama run my-agent</code></pre>
+
+                    <h3>2.3 Python SDK集成</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">import ollama
+from typing import List, Dict
+
+class LocalAgent:
+    def __init__(self, model_name: str = "my-agent"):
+        self.model = model_name
+        self.client = ollama.Client(host='http://localhost:11434')
+        self.memory: List[Dict] = []
+    
+    def chat(self, message: str, tools: List[Dict] = None) -> str:
+        """支持工具调用的对话接口"""
+        messages = self.memory + [{"role": "user", "content": message}]
+        
+        response = self.client.chat(
+            model=self.model,
+            messages=messages,
+            tools=tools,
+            options={
+                "temperature": 0.7,
+                "num_predict": 2048  # 限制输出长度避免幻觉
+            }
+        )
+        
+        # 更新记忆（滑动窗口管理）
+        self.memory.append({"role": "user", "content": message})
+        self.memory.append({
+            "role": "assistant", 
+            "content": response['message']['content']
+        })
+        
+        # 保持最近10轮对话
+        if len(self.memory) > 20:
+            self.memory = self.memory[-20:]
+            
+        return response['message']['content']
+    
+    def clear_memory(self):
+        self.memory = []
+
+# 使用示例
+agent = LocalAgent()
+response = agent.chat("帮我规划一个3天2晚的北京旅行行程")
+print(response)</code></pre>
+                </section>
+
+                <section id="chapter3">
+                    <h2>三、生产部署：vLLM高性能方案</h2>
+                    <p><span class="tag">适用场景</span>高并发Agent服务、企业级应用、多模型路由</p>
+
+                    <h3>3.1 安装vLLM</h3>
+                    <div class="code-header">
+                        <span class="code-lang">bash</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-bash">pip install vllm==0.4.2  # 使用最新稳定版
+
+# 验证安装
+python -c "import vllm; print(vllm.__version__)"</code></pre>
+
+                    <h3>3.2 单机单卡部署（开发环境）</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python"># start_server.py
+from vllm import LLM, SamplingParams
+from vllm.engine.arg_utils import AsyncEngineArgs
+from vllm.entrypoints.openai.api_server import run_server
+import uvicorn
+
+# 模型配置
+model_name = "Qwen/Qwen2.5-14B-Instruct"  # 自动从HuggingFace下载
+# 或使用本地路径："/path/to/local/model"
+
+# 启动参数（Agent优化）
+engine_args = AsyncEngineArgs(
+    model=model_name,
+    tensor_parallel_size=1,  # 单卡
+    gpu_memory_utilization=0.9,
+    max_model_len=8192,      # Agent需要长上下文
+    quantization="awq",      # 4bit量化节省显存
+    dtype="half",
+    enable_lora=True,        # 支持多LoRA适配器（多Agent场景）
+    max_loras=4,             # 最多同时加载4个LoRA
+    max_lora_rank=64
+)
+
+if __name__ == "__main__":
+    run_server(engine_args, host="0.0.0.0", port=8000)</code></pre>
+
+                    <p>启动服务：</p>
+                    <pre><code class="language-bash">python start_server.py</code></pre>
+
+                    <h3 id="chapter3-2">3.3 OpenAI兼容API调用</h3>
+                    <p>vLLM默认提供OpenAI兼容接口，Agent框架可直接迁移：</p>
+                    
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">from openai import OpenAI
+import json
+
+# 连接本地vLLM（与OpenAI API完全兼容）
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="not-needed"  # 本地部署无需API Key
+)
+
+# Agent工具定义
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_weather",
+            "description": "查询指定城市的天气",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "city": {"type": "string", "description": "城市名称"},
+                    "date": {"type": "string", "description": "日期，格式YYYY-MM-DD"}
+                },
+                "required": ["city"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_email",
+            "description": "发送邮件",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "to": {"type": "string"},
+                    "subject": {"type": "string"},
+                    "body": {"type": "string"}
+                },
+                "required": ["to", "subject", "body"]
+            }
+        }
+    }
+]
+
+# 多轮对话Agent
+messages = [
+    {"role": "system", "content": "你是一个智能助手，可以帮用户查询天气和发送邮件。"},
+    {"role": "user", "content": "明天北京天气怎么样？然后帮我把这个天气信息发给zhangsan@company.com"}
+]
+
+response = client.chat.completions.create(
+    model="Qwen2.5-14B-Instruct",  # 模型名称
+    messages=messages,
+    tools=tools,
+    tool_choice="auto",
+    temperature=0.7,
+    max_tokens=1024
+)
+
+# 处理工具调用
+if response.choices[0].message.tool_calls:
+    tool_call = response.choices[0].message.tool_calls[0]
+    function_name = tool_call.function.name
+    arguments = json.loads(tool_call.function.arguments)
+    
+    print(f"需要调用工具: {function_name}")
+    print(f"参数: {arguments}")
+    # 在这里执行实际工具逻辑...
+else:
+    print(response.choices[0].message.content)</code></pre>
+                </section>
+
+                <section id="chapter4">
+                    <h2>四、Agent框架集成实战</h2>
+
+                    <h3 id="chapter4-1">4.1 LangChain集成</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">from langchain_community.llms import VLLMOpenAI
+from langchain.agents import Tool, AgentExecutor, create_react_agent
+from langchain import hub
+
+# 连接本地vLLM
+llm = VLLMOpenAI(
+    openai_api_key="not-needed",
+    openai_api_base="http://localhost:8000/v1",
+    model_name="Qwen2.5-14B-Instruct",
+    temperature=0.7,
+    max_tokens=1024
+)
+
+# 定义工具
+tools = [
+    Tool(
+        name="Search",
+        func=lambda x: f"搜索结果：关于{x}的信息...",
+        description="用于搜索互联网信息"
+    ),
+    Tool(
+        name="Calculator", 
+        func=lambda x: str(eval(x)),
+        description="用于数学计算"
+    )
+]
+
+# 加载ReAct提示词模板
+prompt = hub.pull("hwchase17/react")
+
+# 创建Agent
+agent = create_react_agent(llm, tools, prompt)
+agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+# 运行
+response = agent_executor.invoke({
+    "input": "北京市人口多少？如果每个人分2个苹果，需要多少个苹果？"
+})
+print(response)</code></pre>
+
+                    <h3 id="chapter4-2">4.2 LlamaIndex RAG Agent集成</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">from llama_index.llms.openai_like import OpenAILike
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from llama_index.core.agent import ReActAgent
+from llama_index.core.tools import QueryEngineTool
+
+# 配置本地LLM
+llm = OpenAILike(
+    model="Qwen2.5-14B-Instruct",
+    api_base="http://localhost:8000/v1",
+    api_key="not-needed",
+    is_chat_model=True,
+    context_window=8192
+)
+
+# 加载本地知识库
+documents = SimpleDirectoryReader("data/").load_data()
+index = VectorStoreIndex.from_documents(documents)
+
+# 创建查询引擎
+query_engine = index.as_query_engine(llm=llm, similarity_top_k=3)
+
+# 封装为工具
+query_tool = QueryEngineTool.from_defaults(
+    query_engine=query_engine,
+    name="knowledge_base",
+    description="用于查询公司内部知识库文档"
+)
+
+# 创建Agent
+agent = ReActAgent.from_tools(
+    tools=[query_tool],
+    llm=llm,
+    verbose=True,
+    context="""
+    你是公司智能助手。回答问题时：
+    1. 优先使用knowledge_base工具查询内部文档
+    2. 如果文档中没有，基于通用知识回答但需标注
+    3. 保持回答简洁，控制在300字以内
+    """
+)
+
+# 使用
+response = agent.chat("公司今年的年假政策是什么？")
+print(response)</code></pre>
+                </section>
+
+                <section id="chapter5">
+                    <h2>五、Function Calling与工具调用</h2>
+
+                    <div class="alert alert-warning">
+                        <strong>注意：</strong>不是所有开源模型都支持 Function Calling，推荐：
+                        <ul>
+                            <li><strong>Qwen2.5 系列</strong>：原生支持工具调用，格式规范</li>
+                            <li><strong>Llama3.1/3.2</strong>：支持工具调用但需特定提示词格式</li>
+                            <li><strong>GLM-4</strong>：ChatGLM系列，工具调用能力强</li>
+                        </ul>
+                    </div>
+
+                    <h3>5.2 自定义工具注册框架</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">import inspect
+from typing import Callable, Dict, Any
+import json
+
+class ToolRegistry:
+    """工具注册中心"""
+    def __init__(self):
+        self._tools: Dict[str, Dict] = {}
+    
+    def register(self, func: Callable = None, name: str = None, description: str = None):
+        """装饰器注册工具"""
+        def decorator(f):
+            tool_name = name or f.__name__
+            tool_desc = description or f.__doc__ or "No description"
+            
+            # 解析函数签名
+            sig = inspect.signature(f)
+            params = {}
+            for param_name, param in sig.parameters.items():
+                param_info = {"type": "string"}  # 默认字符串
+                if param.default != inspect.Parameter.empty:
+                    param_info["default"] = param.default
+                params[param_name] = param_info
+            
+            self._tools[tool_name] = {
+                "function": f,
+                "schema": {
+                    "name": tool_name,
+                    "description": tool_desc,
+                    "parameters": {
+                        "type": "object",
+                        "properties": params,
+                        "required": list(params.keys())
+                    }
+                }
+            }
+            return f
+        
+        if func:
+            return decorator(func)
+        return decorator
+    
+    def get_schemas(self) -> List[Dict]:
+        """获取OpenAI格式的工具描述"""
+        return [{"type": "function", "function": t["schema"]} for t in self._tools.values()]
+    
+    def execute(self, tool_name: str, arguments: Dict) -> Any:
+        """执行工具"""
+        if tool_name not in self._tools:
+            raise ValueError(f"未知工具: {tool_name}")
+        
+        func = self._tools[tool_name]["function"]
+        return func(**arguments)
+
+# 实例化注册中心
+registry = ToolRegistry()
+
+# 注册示例工具
+@registry.register(description="查询数据库")
+def query_database(sql: str, limit: int = 10):
+    """模拟数据库查询"""
+    return f"执行SQL: {sql}, 返回{limit}条结果..."
+
+@registry.register(description="发送通知")
+def send_notification(user_id: str, message: str, level: str = "info"):
+    """发送系统通知"""
+    return f"已发送{level}级别消息给{user_id}: {message}"
+
+# Agent使用
+class FunctionCallAgent:
+    def __init__(self, llm_client, tool_registry):
+        self.client = llm_client
+        self.tools = tool_registry
+    
+    def run(self, user_input: str) -> str:
+        # 第一次调用：获取工具调用决策
+        response = self.client.chat.completions.create(
+            model="Qwen2.5-14B-Instruct",
+            messages=[{"role": "user", "content": user_input}],
+            tools=self.tools.get_schemas(),
+            tool_choice="auto"
+        )
+        
+        msg = response.choices[0].message
+        
+        # 处理工具调用
+        if msg.tool_calls:
+            results = []
+            for tool_call in msg.tool_calls:
+                func_name = tool_call.function.name
+                args = json.loads(tool_call.function.arguments)
+                
+                # 执行工具
+                result = self.tools.execute(func_name, args)
+                results.append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": func_name,
+                    "content": str(result)
+                })
+            
+            # 第二次调用：生成最终回复
+            final_response = self.client.chat.completions.create(
+                model="Qwen2.5-14B-Instruct",
+                messages=[
+                    {"role": "user", "content": user_input},
+                    msg.model_dump(),
+                    *results
+                ]
+            )
+            return final_response.choices[0].message.content
+        
+        return msg.content
+
+# 使用
+agent = FunctionCallAgent(client, registry)
+result = agent.run("查询最近注册用户，并发送欢迎消息给user_123")
+print(result)</code></pre>
+                </section>
+
+                <section id="chapter6">
+                    <h2>六、RAG系统与知识库集成</h2>
+
+                    <h3>6.1 本地Embedding模型部署</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">from sentence_transformers import SentenceTransformer
+import numpy as np
+
+# 加载本地Embedding模型（仅需CPU，500MB显存）
+embed_model = SentenceTransformer('BAAI/bge-large-zh-v1.5')
+
+def get_embeddings(texts: List[str]) -> np.ndarray:
+    """获取文本向量"""
+    embeddings = embed_model.encode(
+        texts, 
+        normalize_embeddings=True,  # 归一化便于余弦相似度计算
+        batch_size=32
+    )
+    return embeddings
+
+# 向量数据库（使用FAISS轻量级方案）
+import faiss
+
+dimension = 1024  # bge-large维度
+index = faiss.IndexFlatIP(dimension)  # 内积近似余弦相似度
+
+# 添加文档向量
+docs = ["文档1内容...", "文档2内容...", "文档3内容..."]
+doc_embeddings = get_embeddings(docs)
+index.add(doc_embeddings)
+
+# 检索
+query = "查询问题"
+query_vec = get_embeddings([query])
+scores, indices = index.search(query_vec, k=3)
+print(f"最相关文档索引: {indices[0]}, 相似度: {scores[0]}")</code></pre>
+
+                    <h3>6.2 完整RAG Agent流程</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">class RAGAgent:
+    def __init__(self, llm_base_url: str, embedding_model_path: str):
+        self.client = OpenAI(base_url=llm_base_url, api_key="not-needed")
+        self.embedder = SentenceTransformer(embedding_model_path)
+        self.index = None
+        self.documents = []
+        
+    def build_knowledge_base(self, docs: List[str]):
+        """构建知识库"""
+        self.documents = docs
+        embeddings = self.embedder.encode(docs, normalize_embeddings=True)
+        
+        dimension = embeddings.shape[1]
+        self.index = faiss.IndexFlatIP(dimension)
+        self.index.add(embeddings)
+        
+    def retrieve(self, query: str, top_k: int = 3) -> List[str]:
+        """检索相关文档"""
+        query_vec = self.embedder.encode([query], normalize_embeddings=True)
+        scores, indices = self.index.search(query_vec, top_k)
+        
+        return [self.documents[i] for i in indices[0] if scores[0][i] > 0.5]
+    
+    def chat(self, query: str) -> str:
+        """RAG对话"""
+        # 检索上下文
+        contexts = self.retrieve(query)
+        context_str = "\n".join([f"[{i+1}] {ctx}" for i, ctx in enumerate(contexts)])
+        
+        # 构造Prompt
+        prompt = f"""基于以下参考资料回答问题。如果资料不足以回答，请说明"根据现有资料无法确定"。
+
+参考资料：
+{context_str}
+
+用户问题：{query}
+
+请给出准确、简洁的回答："""
+        
+        response = self.client.chat.completions.create(
+            model="Qwen2.5-14B-Instruct",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3  # RAG需要低温度确保准确性
+        )
+        
+        return response.choices[0].message.content
+
+# 使用
+rag_agent = RAGAgent("http://localhost:8000/v1", "BAAI/bge-large-zh-v1.5")
+rag_agent.build_knowledge_base([
+    "公司成立于2010年，主营业务是人工智能...",
+    "年假政策：入职满1年享受5天年假，满5年享受10天...",
+    "办公地址：北京市海淀区..."
+])
+
+answer = rag_agent.chat("公司成立时间和年假天数？")
+print(answer)</code></pre>
+                </section>
+
+                <section id="chapter7">
+                    <h2>七、多Agent系统架构</h2>
+                    
+                    <h3>7.1 多Agent协作框架（Controller模式）</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">from enum import Enum
+from typing import List, Optional
+import concurrent.futures
+
+class AgentRole(Enum):
+    PLANNER = "planner"      # 任务规划
+    RESEARCHER = "researcher" # 信息搜集
+    CODER = "coder"          # 代码生成
+    REVIEWER = "reviewer"    # 结果审查
+
+class SubAgent:
+    """专业子Agent"""
+    def __init__(self, role: AgentRole, model_endpoint: str, system_prompt: str):
+        self.role = role
+        self.client = OpenAI(base_url=model_endpoint, api_key="not-needed")
+        self.system_prompt = system_prompt
+        
+    def execute(self, task: str, context: List[Dict] = None) -> str:
+        messages = [{"role": "system", "content": self.system_prompt}]
+        if context:
+            messages.extend(context)
+        messages.append({"role": "user", "content": task})
+        
+        response = self.client.chat.completions.create(
+            model="Qwen2.5-14B-Instruct",
+            messages=messages,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+
+class MultiAgentSystem:
+    """多Agent控制器"""
+    def __init__(self):
+        self.agents: Dict[AgentRole, SubAgent] = {}
+        self.endpoint = "http://localhost:8000/v1"
+        
+    def register_agent(self, role: AgentRole, system_prompt: str):
+        """注册Agent"""
+        self.agents[role] = SubAgent(role, self.endpoint, system_prompt)
+        
+    def run_workflow(self, user_request: str) -> Dict:
+        """执行多Agent工作流"""
+        
+        # Step 1: Planner分解任务
+        planner = self.agents[AgentRole.PLANNER]
+        plan = planner.execute(
+            f"将以下请求分解为可执行步骤（JSON格式）：{user_request}"
+        )
+        
+        # Step 2: 并行执行子任务
+        results = {}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = {}
+            
+            if AgentRole.RESEARCHER in self.agents and "搜索" in plan:
+                futures[executor.submit(
+                    self.agents[AgentRole.RESEARCHER].execute, 
+                    "搜集相关信息", 
+                    [{"role": "assistant", "content": plan}]
+                )] = "research"
+                
+            if AgentRole.CODER in self.agents and "代码" in plan:
+                futures[executor.submit(
+                    self.agents[AgentRole.CODER].execute,
+                    "编写代码",
+                    [{"role": "assistant", "content": plan}]
+                )] = "code"
+            
+            for future in concurrent.futures.as_completed(futures):
+                task_name = futures[future]
+                try:
+                    results[task_name] = future.result()
+                except Exception as e:
+                    results[task_name] = f"Error: {str(e)}"
+        
+        # Step 3: Reviewer整合结果
+        if AgentRole.REVIEWER in self.agents:
+            final_output = self.agents[AgentRole.REVIEWER].execute(
+                f"整合以下结果并生成最终回复：\n{json.dumps(results, ensure_ascii=False)}",
+                [{"role": "assistant", "content": plan}]
+            )
+        else:
+            final_output = json.dumps(results, ensure_ascii=False)
+            
+        return {
+            "plan": plan,
+            "intermediate_results": results,
+            "final_output": final_output
+        }
+
+# 使用示例
+system = MultiAgentSystem()
+
+# 注册各角色Agent
+system.register_agent(AgentRole.PLANNER, """你是任务规划专家。将用户请求分解为清晰的步骤。
+输出格式必须是JSON：{"steps": [{"action": "...", "agent": "...", "description": "..."}]}""")
+
+system.register_agent(AgentRole.RESEARCHER, "你是信息搜集专家，擅长从知识库中检索准确信息。")
+system.register_agent(AgentRole.CODER, "你是Python专家，编写高质量、带注释的代码。")
+system.register_agent(AgentRole.REVIEWER, "你是质量审查专家，整合各模块输出并生成最终回复。")
+
+# 执行复杂任务
+result = system.run_workflow("帮我写一个Python爬虫抓取新闻标题，并分析其中的关键词频率")
+print(result)</code></pre>
+                </section>
+
+                <section id="chapter8">
+                    <h2>八、性能优化与监控</h2>
+
+                    <h3>8.1 关键性能指标监控</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python">import time
+from contextlib import contextmanager
+from collections import deque
+import psutil
+import GPUtil
+
+class AgentMonitor:
+    def __init__(self):
+        self.latency_history = deque(maxlen=100)  # 延迟历史
+        self.token_throughput = []  # 吞吐量
+        self.error_count = 0
+        
+    @contextmanager
+    def track_request(self):
+        """跟踪单次请求性能"""
+        start_time = time.time()
+        start_tokens = self._get_total_tokens()
+        
+        try:
+            yield self
+            # 记录成功指标
+            latency = time.time() - start_time
+            self.latency_history.append(latency)
+            
+        except Exception as e:
+            self.error_count += 1
+            raise e
+            
+    def _get_total_tokens(self):
+        # 实际应从vLLM metrics接口获取
+        return 0
+    
+    def get_stats(self):
+        """获取统计报告"""
+        if not self.latency_history:
+            return "暂无数据"
+            
+        avg_latency = sum(self.latency_history) / len(self.latency_history)
+        p95_latency = sorted(self.latency_history)[int(len(self.latency_history)*0.95)]
+        
+        # 系统资源
+        cpu_percent = psutil.cpu_percent()
+        memory = psutil.virtual_memory()
+        gpus = GPUtil.getGPUs()
+        gpu_load = gpus[0].load * 100 if gpus else 0
+        
+        return {
+            "avg_latency_sec": round(avg_latency, 2),
+            "p95_latency_sec": round(p95_latency, 2),
+            "error_rate": f"{(self.error_count / len(self.latency_history) * 100):.2f}%",
+            "cpu_percent": cpu_percent,
+            "memory_percent": memory.percent,
+            "gpu_load_percent": round(gpu_load, 1)
+        }</code></pre>
+
+                    <h3>8.2 vLLM性能调优参数</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python"># 高并发优化配置
+optimized_args = AsyncEngineArgs(
+    model="Qwen2.5-14B-Instruct",
+    
+    # 批处理优化
+    max_num_seqs=256,        # 最大并发序列数
+    max_num_batched_tokens=4096,  # 最大批处理token数
+    
+    # 内存优化
+    gpu_memory_utilization=0.95,
+    swap_space=4,            # CPU交换空间(GB)
+    
+    # 推理加速
+    quantization="awq",      # 或 "gptq"
+    dtype="half",
+    kv_cache_dtype="fp8",    # KV缓存量化
+    
+    # 长上下文Agent优化
+    max_model_len=16384,
+    rope_scaling={"type": "dynamic", "factor": 2.0},  # 扩展上下文
+    
+    # 调度器优化
+    scheduler_delay_factor=0.0,  # 降低调度延迟
+    enable_chunked_prefill=True, # 启用分块预填充
+    
+    # 多LoRA优化（多Agent场景）
+    enable_lora=True,
+    max_loras=8,
+    max_lora_rank=128,
+    lora_extra_vocab_size=256
+)</code></pre>
+                </section>
+
+                <section id="chapter9">
+                    <h2>九、故障排查手册</h2>
+
+                    <h3>9.1 常见问题速查表</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>问题现象</th>
+                                <th>可能原因</th>
+                                <th>解决方案</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>CUDA Out of Memory</strong></td>
+                                <td>批处理大小过大/长上下文</td>
+                                <td>减小max_num_seqs；启用4-bit量化；限制max_model_len</td>
+                            </tr>
+                            <tr>
+                                <td><strong>模型输出乱码/重复</strong></td>
+                                <td>温度参数过高/采样设置不当</td>
+                                <td>降低temperature至0.3-0.5；检查repeat_penalty</td>
+                            </tr>
+                            <tr>
+                                <td><strong>工具调用格式错误</strong></td>
+                                <td>模型不支持Function Calling</td>
+                                <td>换用Qwen2.5/Llama3.1；在提示词中强制JSON格式示例</td>
+                            </tr>
+                            <tr>
+                                <td><strong>响应速度慢</strong></td>
+                                <td>CPU瓶颈/未使用GPU</td>
+                                <td>检查CUDA是否可用；启用enforce_eager=False；使用Tensor Parallel</td>
+                            </tr>
+                            <tr>
+                                <td><strong>vLLM启动失败</strong></td>
+                                <td>端口占用/模型路径错误</td>
+                                <td>检查8000端口：lsof -i :8000；确认模型路径存在且含config.json</td>
+                            </tr>
+                            <tr>
+                                <td><strong>上下文遗忘</strong></td>
+                                <td>超过最大长度被截断</td>
+                                <td>增加max_model_len；实现滑动窗口记忆；使用RAG外挂知识库</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>9.2 诊断脚本</h3>
+                    <div class="code-header">
+                        <span class="code-lang">python</span>
+                        <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                    </div>
+                    <pre><code class="language-python"># diagnose.py - 运行环境诊断
+import torch
+import subprocess
+import os
+
+def check_environment():
+    print("=== 本地模型部署环境诊断 ===\n")
+    
+    # 1. CUDA检查
+    print("1. CUDA可用性:")
+    print(f"   PyTorch版本: {torch.__version__}")
+    print(f"   CUDA可用: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"   CUDA版本: {torch.version.cuda}")
+        print(f"   GPU数量: {torch.cuda.device_count()}")
+        for i in range(torch.cuda.device_count()):
+            print(f"   GPU {i}: {torch.cuda.get_device_name(i)}")
+            print(f"   显存: {torch.cuda.get_device_properties(i).total_memory / 1024**3:.2f} GB")
+    
+    # 2. 显存碎片检查
+    print("\n2. 显存状态:")
+    if torch.cuda.is_available():
+        for i in range(torch.cuda.device_count()):
+            torch.cuda.set_device(i)
+            allocated = torch.cuda.memory_allocated() / 1024**3
+            reserved = torch.cuda.memory_reserved() / 1024**3
+            print(f"   GPU {i}: 已分配 {allocated:.2f}GB, 预留 {reserved:.2f}GB")
+    
+    # 3. 端口检查
+    print("\n3. 常用端口占用:")
+    ports = [11434, 8000, 8080, 3000]
+    for port in ports:
+        result = subprocess.run(
+            ["lsof", "-i", f":{port}"], 
+            capture_output=True, 
+            text=True
+        )
+        status = "已被占用" if result.returncode == 0 else "空闲"
+        print(f"   端口 {port}: {status}")
+    
+    # 4. 磁盘空间
+    print("\n4. 磁盘空间:")
+    stat = os.statvfs("/")
+    free_gb = (stat.f_bavail * stat.f_frsize) / 1024**3
+    print(f"   根目录剩余: {free_gb:.2f} GB")
+    
+    print("\n=== 诊断完成 ===")
+
+if __name__ == "__main__":
+    check_environment()</code></pre>
+                </section>
+
+                <section id="appendix">
+                    <h2>附录：推荐模型清单</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>模型名称</th>
+                                <th>参数量</th>
+                                <th>量化后显存</th>
+                                <th>特点</th>
+                                <th>适用场景</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Qwen2.5-Instruct</strong></td>
+                                <td>14B</td>
+                                <td>8GB (INT4)</td>
+                                <td>中文能力强，工具调用规范</td>
+                                <td>通用Agent、客服</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Qwen2.5-Instruct</strong></td>
+                                <td>32B</td>
+                                <td>20GB (INT4)</td>
+                                <td>推理能力强</td>
+                                <td>复杂任务规划</td>
+                            </tr>
+                            <tr>
+                                <td><strong>DeepSeek-R1-Distill</strong></td>
+                                <td>14B/32B</td>
+                                <td>8GB/20GB</td>
+                                <td>蒸馏版，推理能力接近原版</td>
+                                <td>代码生成、数学推理</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Llama3.1-Instruct</strong></td>
+                                <td>8B</td>
+                                <td>6GB</td>
+                                <td>英文强，生态丰富</td>
+                                <td>多语言Agent</td>
+                            </tr>
+                            <tr>
+                                <td><strong>GLM-4-9B-Chat</strong></td>
+                                <td>9B</td>
+                                <td>6GB</td>
+                                <td>长上下文(128K)，工具调用好</td>
+                                <td>长文档处理</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Yi-1.5-34B-Chat</strong></td>
+                                <td>34B</td>
+                                <td>20GB</td>
+                                <td>CEval评测高</td>
+                                <td>中文知识问答</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert alert-success" style="margin-top: 2rem;">
+                        <strong>学习完成！</strong><br>
+                        建议按照章节顺序实践：先用Ollama跑通Agent原型 → 迁移到vLLM优化性能 → 集成RAG和工具调用 → 构建多Agent系统。
+                        祝部署顺利！
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <button class="back-to-top" id="backToTop" onclick="scrollToTop()">↑</button>
+
+    <script>
+        // 复制代码功能
+        function copyCode(btn) {
+            const pre = btn.closest('.code-header').nextElementSibling;
+            const code = pre.querySelector('code');
+            
+            navigator.clipboard.writeText(code.innerText).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = '已复制!';
+                btn.classList.add('copied');
+                
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        // 侧边栏切换（移动端）
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // 处理导航点击（移动端自动关闭）
+        function handleNavClick() {
+            if (window.innerWidth <= 1024) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        // 回到顶部
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // 监听滚动显示回到顶部按钮
+        window.addEventListener('scroll', () => {
+            const backToTop = document.getElementById('backToTop');
+            if (window.scrollY > 300) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+        });
+
+        // 监听滚动更新导航高亮
+        const sections = document.querySelectorAll('section[id]');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // 点击外部关闭移动端侧边栏
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            if (window.innerWidth <= 1024 && 
+                !sidebar.contains(e.target) && 
+                !menuBtn.contains(e.target) && 
+                sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
